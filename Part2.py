@@ -1,13 +1,16 @@
+from pathlib import *
 import RPi.GPIO as GPIO
 import Keypad
 from firebase import firebase
 import json
 import time
 import lcddriver
+from datetime import date
 
 
 
-from pathlib import *
+
+
 # coding: utf-8
 
 
@@ -19,8 +22,38 @@ keys =  [   '1','2','3','A',
             '*','0','#','D'     ]
 rowsPins = [12,16,18,22]
 colsPins = [19,15,13,11]
+my_file=Path('DoorCreation.txt')
+mylines = []
+isfound= False
+if my_file.exists():
+   
+#if it does hthen open it and append the lines to the array
+    objText = open('DoorCreation.txt', "r")
+    for line in objText:
+        mylines.append(line)
 
-DoorName="TASDA"
+    
+  #  lstLines = objText.readlines()
+   # print (lstLines)
+    mytext=mylines[0].rstrip('DoorCode:')
+    print(mytext)
+#this just gets the raw code =, it doesth is by replacing the text auth code with nothing    
+
+    mytext1 = mytext.replace("DoorCode: ", "")
+
+    print(mytext1)
+    DoorName=mytext1
+    
+    isfound=True
+    objText.close()
+
+
+
+
+
+
+
+
 display = lcddriver.lcd()
 def loop():  
     keypad = Keypad.Keypad(keys,rowsPins,colsPins,ROWS,COLS)
@@ -60,6 +93,8 @@ def loop():
                 display.lcd_display_string("# to input", 4)                           
                                             
 def checker(doorCode):
+    firstname=""
+    lastname=""
     from firebase import firebase
     #start
     print("the door code you input is..."+doorCode)
@@ -102,14 +137,18 @@ def checker(doorCode):
             doorAccResult=firebase.get('/AccessRequests/'+str(x5),'')
             doorAccjson=json.dumps(doorAccResult, sort_keys=True, indent=4)
             doorJson=json.loads(doorAccjson)
-            print(doorJson["DoorCode"])
-            doojint=doorJson["DoorCode"]
-            dji=int(doojint)
-            print (doorCode)
-            if int(doorCode) == dji:
-                doorAccIsFound=True
-                userAuthCode=doorJson["AuthCode"]
-                print("doorCode found")
+            try:
+                
+                print(doorJson["DoorCode"])
+                doojint=doorJson["DoorCode"]
+                dji=int(doojint)
+                print (doorCode)
+                if int(doorCode) == dji:
+                    doorAccIsFound=True
+                    userAuthCode=doorJson["AuthCode"]
+                    print("doorCode found")
+            except:
+                print("error")
             x5=x5-1
         if doorAccIsFound==True:
             NumOfUsers =firebase.get('/UserCount/node/cnt','')
@@ -137,6 +176,8 @@ def checker(doorCode):
                             #this user has access to the db
                                     print("access granted")
                                     userAccess=True
+                                    firstname=userJson["FirstName"]
+                                    lastname=userJson["LastName"]
                 except:
                     print('null')
                     
@@ -149,6 +190,31 @@ def checker(doorCode):
     GPIO.setup(12,GPIO.OUT)
     if checker == True and doorAccIsFound ==True and userAccess==True:
     #show green led
+        try:
+            
+            
+            NumOfLog =firebase.get('/LogCount/node/cnt','')
+            x3=NumOfLog
+            numofl=int(x3)
+            numofl=numofl+1
+            print(numofl)
+            data1={
+            'cnt':numofl
+            }
+            TodaysDate = date.today()
+            result1=firebase.put('/LogCount','node',data1)
+            data2={
+                  'DateAndTime':TodaysDate,
+                  'DoorName':DoorName,
+                  'FirstName':firstname,
+                  'LastName':lastname,
+                  'LogDesc':'door opened',
+                  'PlaceName':placeName,
+                  }
+            result1=firebase.put('/Logs',str(numofl),data2)
+        except:
+            print("error")
+        
         
         print("acess granted")
         display.lcd_clear()
@@ -208,11 +274,18 @@ if __name__ == '__main__':     # Program start from here
     try:
             retry=1
             while retry==1:
-                print("Please input your door entrance code")
-                display.lcd_clear()
-                display.lcd_display_string("Input door code", 1)
-                display.lcd_display_string("c to clear", 3)
-                display.lcd_display_string("# to input", 4)  
-                loop()
+                
+                if(isfound==True):
+                    print("Please input your door entrance code")
+                    display.lcd_clear()
+                    display.lcd_display_string("Input door code", 1)
+                    display.lcd_display_string("c to clear", 3)
+                    display.lcd_display_string("# to input", 4)
+                    loop()
+                else:
+                    display.lcd_clear()
+                    display.lcd_display_string("Set Valid Door Name", 1)
+                    time.sleep(1)
+                    
     except KeyboardInterrupt:  # When 'Ctrl+C' is pressed, the child program destroy() will be  executed.
             GPIO.cleanup()
