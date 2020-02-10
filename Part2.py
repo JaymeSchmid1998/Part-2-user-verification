@@ -3,6 +3,8 @@ import Keypad
 from firebase import firebase
 import json
 import time
+import lcddriver
+
 
 
 from pathlib import *
@@ -11,15 +13,15 @@ from pathlib import *
 
 ROWS = 4
 COLS = 4
-keys = 	[	'1','2','3','A',
-		'4','5','6','B',
-	    	'7','8','9','C',
-    		'*','0','#','D'		]
+keys =  [   '1','2','3','A',
+        '4','5','6','B',
+            '7','8','9','C',
+            '*','0','#','D'     ]
 rowsPins = [12,16,18,22]
 colsPins = [19,15,13,11]
 
 DoorName="TASDA"
-
+display = lcddriver.lcd()
 def loop():  
     keypad = Keypad.Keypad(keys,rowsPins,colsPins,ROWS,COLS)
     keypad.setDebounceTime(50)
@@ -32,15 +34,30 @@ def loop():
             if key=='#':
                     #
                 print("test")
+                display.lcd_clear()
+                display.lcd_display_string("Checking...", 1)
                 checker(storedvalue)
+                
+                #display.lcd_display_string(storedvalue, 2)
+                #display.lcd_display_string("c to clear", 3)
+                #display.lcd_display_string("# to input", 4)  
                 test=0
             elif key=='C':
                 storedvalue = storedvalue[:-1]
-                print(storedvalue)                                              
+                print(storedvalue)
+                display.lcd_clear()
+                display.lcd_display_string("Input door code", 1)
+                display.lcd_display_string(storedvalue, 2)
+                display.lcd_display_string("c to clear", 3)
+                display.lcd_display_string("# to input", 4)  
             else:
                 storedvalue =storedvalue + key
                 print(storedvalue)
-                                            
+                display.lcd_clear()
+                display.lcd_display_string("Input door code", 1)
+                display.lcd_display_string(storedvalue, 2)
+                display.lcd_display_string("c to clear", 3)
+                display.lcd_display_string("# to input", 4)                           
                                             
 def checker(doorCode):
     from firebase import firebase
@@ -103,18 +120,26 @@ def checker(doorCode):
                 doorUserResult=firebase.get('/Users/'+str(numofu),'')
                 doorUserjson=json.dumps(doorUserResult, sort_keys=True, indent=4)
                 userJson=json.loads(doorUserjson)
-                print(userJson["PlaceName"])
-                print(userJson["AuthLevel"])
-                print(userJson["AuthCode"])
-                print(userJson["Status"])
+                try:
+                    
+                    print(userJson["PlaceName"])
+                    print(userJson["AuthLevel"])
+                    print(userJson["AuthCode"])
+                    
+                    print(userJson["Status"])
             #check auth code then status then auth level and then place name
-                if int(userAuthCode)==int(userJson["AuthCode"]):
-                    if userJson["Status"]=="active":
-                        if int(userJson["AuthLevel"])==int(authlevel):
-                            if userJson["PlaceName"]== placeName:
+                    if int(userAuthCode)==int(userJson["AuthCode"]):
+                        if userJson["Status"]=="active":
+                            if int(userJson["AuthLevel"])==int(authlevel):
+                            
+                                print("up to here ")
+                                if userJson["PlaceName"]== placeName:
                             #this user has access to the db
-                                print("access granted")
-                                userAccess=True
+                                    print("access granted")
+                                    userAccess=True
+                except:
+                    print('null')
+                    
                 numofu=numofu-1
     #i need to firstly check if the door access request exists and is valid
     #then i need to check if the users account has access to the door
@@ -124,18 +149,26 @@ def checker(doorCode):
     GPIO.setup(12,GPIO.OUT)
     if checker == True and doorAccIsFound ==True and userAccess==True:
     #show green led
+        
         print("acess granted")
+        display.lcd_clear()
+        display.lcd_display_string("access granted", 1)
         GPIO.output(6,1)
         time.sleep(1)
         GPIO.output(6,0)
         openDoor()
+        time.sleep(1)
     else:
+        display.lcd_clear()
+        display.lcd_display_string("access denied", 1)
         print("access denied")
         GPIO.output(12,1)
         time.sleep(1)
         GPIO.output(12,0)
+        time.sleep(1)
     #show red led
     GPIO.cleanup()
+    time.sleep(1)
     #end
 def openDoor():
     GPIO.setmode(GPIO.BCM)
@@ -162,7 +195,7 @@ def openDoor():
                 #print(seq[halfstep][pin])
                 GPIO.output(ControlPin[pin],seq[halfstep][pin])
             
-            time.sleep(0.00001)
+            time.sleep(0.001)
         
     GPIO.cleanup()
     
@@ -171,11 +204,15 @@ def openDoor():
     
     
 if __name__ == '__main__':     # Program start from here
-	
-	try:
+    
+    try:
             retry=1
             while retry==1:
                 print("Please input your door entrance code")
+                display.lcd_clear()
+                display.lcd_display_string("Input door code", 1)
+                display.lcd_display_string("c to clear", 3)
+                display.lcd_display_string("# to input", 4)  
                 loop()
-	except KeyboardInterrupt:  # When 'Ctrl+C' is pressed, the child program destroy() will be  executed.
-	    	GPIO.cleanup()
+    except KeyboardInterrupt:  # When 'Ctrl+C' is pressed, the child program destroy() will be  executed.
+            GPIO.cleanup()
