@@ -35,12 +35,14 @@ if my_file.exists():
     
   #  lstLines = objText.readlines()
    # print (lstLines)
-    mytext=mylines[0].rstrip('DoorCode:')
+    mytext=mylines[0].rstrip('DoorName:')
     print(mytext)
 #this just gets the raw code =, it doesth is by replacing the text auth code with nothing    
 
-    mytext1 = mytext.replace("DoorCode: ", "")
-
+    mytext1 = mytext.replace("DoorName: ", "")
+    
+    print(mytext1)
+    mytext1 = mytext1.replace("\n", "")
     print(mytext1)
     DoorName=mytext1
     
@@ -188,6 +190,9 @@ def checker(doorCode):
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(6,GPIO.OUT)
     GPIO.setup(12,GPIO.OUT)
+    print(checker)
+    print(doorAccIsFound)
+    print(userAccess)
     if checker == True and doorAccIsFound ==True and userAccess==True:
     #show green led
         try:
